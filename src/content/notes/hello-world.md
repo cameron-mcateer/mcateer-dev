@@ -1,6 +1,6 @@
 ---
 title: Hello World
-summary: Placeholder note entry — delete once a real one exists.
+summary: A quick hello
 date: 2026-05-13
 draft: false
 ---
