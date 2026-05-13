@@ -2,11 +2,6 @@ name: release
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to deploy (e.g. release-2026-05-13). Must already exist."
-        required: true
-        type: string
 
 concurrency:
   group: release
@@ -18,27 +13,23 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout (full history + tags)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve tag to commit SHA
-        id: resolve
+      - name: Ensure dispatched against a release tag
         run: |
-          tag="${{ inputs.tag }}"
-          if ! git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
-            echo "::error::Tag '${tag}' not found in this repository."
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "::error::This workflow can only be run against a tag. Got '${GITHUB_REF}'."
             exit 1
           fi
-          sha=$(git rev-parse "refs/tags/${tag}^{commit}")
-          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
-          echo "Resolved ${tag} -> ${sha}"
+          if [[ "${GITHUB_REF_NAME}" != release-* ]]; then
+            echo "::error::Only 'release-*' tags can be promoted. Got '${GITHUB_REF_NAME}'."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
 
       - name: Force-push release branch to tag
         env:
-          SHA: ${{ steps.resolve.outputs.sha }}
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
         run: |
           git push --force origin "${SHA}:refs/heads/release"
           {
