@@ -43,6 +43,12 @@ Entry `id` (used as the URL slug) is the filename without extension, relative to
 
 Hand-rolled CSS in `src/styles/global.css`, imported once via `src/layouts/Base.astro`. No framework. Dark mode is automatic via `@media (prefers-color-scheme: dark)` swapping CSS custom properties — there is no toggle. Typography: system serif for body, system sans for UI/headings, system mono for code (zero font requests).
 
+### Release model
+
+Two-branch + tag-driven deploys: develop on `main` (no deploy), cut a `release-*` tag at a commit you want to ship, dispatch the `release` GitHub Actions workflow against that tag, the workflow force-pushes the `release` branch to that commit, and Cloudflare Workers Builds deploys the push. Rollback is a new `release-*` tag at an older commit, dispatched the same way.
+
+For the design rationale behind this shape — why tags + a pointer branch, why force-push, why the workflow exists rather than deploying tags directly, the rollback model, draft-flag orthogonality, and failure modes — see [`.claude/release.md`](.claude/release.md). The mechanics live in `.github/workflows/release.yml`.
+
 ### Cloudflare specifics
 
 - `wrangler.jsonc` declares `main: "@astrojs/cloudflare/entrypoints/server"` and an `ASSETS` binding pointing at `./dist`. Adding bindings here must be followed by `npm run generate-types` so `worker-configuration.d.ts` stays in sync with `tsconfig.json`.
