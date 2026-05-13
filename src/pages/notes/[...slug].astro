@@ -1,0 +1,22 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const isProd = import.meta.env.PROD;
+  const entries = await getCollection('notes');
+  return entries
+    .filter((e) => !isProd || !e.data.draft)
+    .map((e) => ({ params: { slug: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+---
+
+<Base title={`${entry.data.title} — Cameron McAteer`} description={entry.data.summary}>
+  <h1>{entry.data.title}</h1>
+  <p class="entry-meta">note · {fmt(entry.data.date)}</p>
+  <Content />
+</Base>

@@ -1,0 +1,37 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const isProd = import.meta.env.PROD;
+
+const projects = (await getCollection('projects'))
+  .filter((e) => !isProd || !e.data.draft)
+  .map((e) => ({ kind: 'project' as const, slug: e.id, ...e.data }));
+
+const notes = (await getCollection('notes'))
+  .filter((e) => !isProd || !e.data.draft)
+  .map((e) => ({ kind: 'note' as const, slug: e.id, ...e.data }));
+
+const entries = [...projects, ...notes].sort(
+  (a, b) => b.date.getTime() - a.date.getTime()
+);
+
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+---
+
+<Base title="log — Cameron McAteer" description="Projects and notes.">
+  <h1>log</h1>
+  {entries.length === 0 ? (
+    <p>No entries yet.</p>
+  ) : (
+    <ul class="log-list">
+      {entries.map((e) => (
+        <li>
+          <time datetime={fmt(e.date)}>{fmt(e.date)}</time>
+          <span class="kind">{e.kind}</span>
+          <a href={`/${e.kind}s/${e.slug}/`}>{e.title}</a>
+        </li>
+      ))}
+    </ul>
+  )}
+</Base>
