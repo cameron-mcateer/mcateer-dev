@@ -1,0 +1,51 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to deploy (e.g. release-2026-05-13). Must already exist."
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag to commit SHA
+        id: resolve
+        run: |
+          tag="${{ inputs.tag }}"
+          if ! git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "::error::Tag '${tag}' not found in this repository."
+            exit 1
+          fi
+          sha=$(git rev-parse "refs/tags/${tag}^{commit}")
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ${tag} -> ${sha}"
+
+      - name: Force-push release branch to tag
+        env:
+          SHA: ${{ steps.resolve.outputs.sha }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          git push --force origin "${SHA}:refs/heads/release"
+          {
+            echo "### Release promoted"
+            echo ""
+            echo "- Tag: \`${TAG}\`"
+            echo "- Commit: \`${SHA}\`"
+            echo "- \`release\` branch now points at this commit."
+            echo "- Cloudflare Workers Builds will pick up the push and deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
